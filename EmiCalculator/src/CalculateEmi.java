@@ -27,17 +27,21 @@ public class CalculateEmi extends HttpServlet {
 			list = new ArrayList<>();
 			double amount = Double.parseDouble(req.getParameter("pAmount"));
 			int time = Integer.parseInt(req.getParameter("month"));
-			double rate = Double.parseDouble(req.getParameter("rate"));
-			double emi = 0.0, temp = 0.0, interestPerMonth = 0.0;
-			temp = 100 * time;
-			interestPerMonth = rate / temp;
-			rate = rate / (12 * 100);
-			time = time * 12;
-			emi = (amount * interestPerMonth * (double) Math.pow(1 + interestPerMonth, time/12))
-					/ (double) (Math.pow(1 + interestPerMonth, time/12) - 1);
-			double finalEmi = Math.round(emi * 100.0) / 100.0;
-			for (int i = 1, j = 1; i <= time/12; i++) {
-				amount -= finalEmi;
+			double r = Double.parseDouble(req.getParameter("rate"));
+			double emi = 0.0, principalPerMonth = 0.0, balancePrincipal = amount, rate = 0.0;
+
+			rate = (r / 12) / 100;
+			emi = (amount * rate * (double) Math.pow(1 + rate, time)) / (double) (Math.pow(1 + rate, time) - 1);
+
+			double finalEmi = Math.round(emi);
+			double totalInt = Math.round((finalEmi * time) - amount);
+			double totalAmt = Math.round(finalEmi * time);
+			double intPerMonth = Math.round(totalInt / time);
+
+			for (int i = 1, j = 1; i <= time; i++) {
+				intPerMonth = (balancePrincipal * rate);
+				balancePrincipal = ((balancePrincipal) - ((finalEmi) - (intPerMonth)));
+				principalPerMonth = Math.round(finalEmi - intPerMonth);
 				switch (j) {
 				case 1:
 					mName = "Jan";
@@ -77,11 +81,11 @@ public class CalculateEmi extends HttpServlet {
 					break;
 				}
 				j++;
-				list.add(new EMI(interestPerMonth, amount, mName));
+				list.add(new EMI(mName, finalEmi, Math.round(intPerMonth), principalPerMonth, Math.round(balancePrincipal)));
 				if (j == 13)
 					j /= 12;
 			}
-			req.setAttribute("emi", finalEmi);
+			req.setAttribute("totalPlan", new EMI(r, amount, totalInt, totalAmt, time));
 			req.setAttribute("data", list);
 			req.getRequestDispatcher("/emi.jsp").forward(req, resp);
 		} catch (Throwable throwable) {
